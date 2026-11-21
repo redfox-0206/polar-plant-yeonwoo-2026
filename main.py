@@ -159,7 +159,8 @@ st.sidebar.caption("학교마다 열 이름이 다르더라도 자동으로 맞�
 uploaded_growth = st.sidebar.file_uploader(
     "📊 생육 결과 CSV",
     type=["csv"],
-    help="열 이름에 단위·띄어쓰기가 섞여 있어도 괜찮습니다 (예: '잎 수(장)', '지상부 길이(mm)').",
+    help=("열 이름에 단위·띄어쓰기가 섞여 있어도 괜찮습니다 "
+          "(예: '잎 수(장)', '지상부 길이(mm)')."),
 )
 
 uploaded_env = st.sidebar.file_uploader(
@@ -167,14 +168,16 @@ uploaded_env = st.sidebar.file_uploader(
     type=["csv"],
     help=("형식 A(time, temperature, humidity, ph, ec, water_temp, co2) 또는 "
           "형식 B(categories, 온도, 습도, EC, PH) 모두 지원."),
+    key="env_uploader",
 )
 
-st.sidebar.divider()
-st.sidebar.markdown("### 📖 용어 설명")
-for term, desc in STAT_EXPLANATIONS.items():
-    st.sidebar.markdown(f"**{term}** : {desc}")
-st.sidebar.divider()
-st.sidebar.caption("💡 업로드한 파일은 브라우저에만 일시 저장되며 서버로 전송되지 않습니다.")
+with st.sidebar:
+    st.divider()
+    st.markdown("### 📖 용어 설명")
+    for term, desc in STAT_EXPLANATIONS.items():
+        st.markdown(f"**{term}** : {desc}")
+    st.divider()
+    st.caption("💡 업로드한 파일은 브라우저에만 일시 저장되며 서버로 전송되지 않습니다.")
 
 # ──────────────────────────────────────────────
 # 5. 데이터 로딩
@@ -191,7 +194,8 @@ if uploaded_growth is not None:
     growth_df = read_csv_flexible(tmp_path)
     if growth_df.empty:
         growth_warnings.append(
-            "생육 CSV를 읽을 수 없습니다. 인코딩(utf-8-sig/cp949) 또는 파일 형식을 확인해주세요."
+            "생육 CSV를 읽을 수 없습니다. 인코딩(utf-8-sig/cp949) 또는 "
+            "파일 형식을 확인해주세요."
         )
     else:
         growth_df, growth_col_map = normalize_growth_columns(growth_df)
@@ -207,14 +211,17 @@ if uploaded_growth is not None:
                 f"다음 열이 없습니다: {', '.join(missing)}. "
                 "열 이름이 학교와 다른 경우 파일 샘플을 확인하세요."
             )
-        for c in ["잎 수(장)", "지상부 길이(mm)", "지하부길이(mm)",
-                  "지하부질량(g)", "지상부질량(g)"]:
+        for c in [
+            "잎 수(장)", "지상부 길이(mm)", "지하부길이(mm)",
+            "지하부질량(g)", "지상부질량(g)",
+        ]:
             if c in growth_df.columns:
                 growth_df[c] = pd.to_numeric(growth_df[c], errors="coerce")
         growth_df = growth_df.dropna(subset=["개체번호"])
         if growth_col_map:
             growth_warnings.append(
-                "열 이름 매핑: " + ", ".join(f"{k} → {v}" for k, v in growth_col_map.items())
+                "열 이름 매핑: "
+                + ", ".join(f"{k} → {v}" for k, v in growth_col_map.items())
             )
 
 if uploaded_env is not None:
@@ -230,7 +237,8 @@ if uploaded_env is not None:
             env_df["time_dt"] = parse_env_time(env_df["time"])
         if env_col_map:
             env_warnings.append(
-                "열 이름 매핑: " + ", ".join(f"{k} → {v}" for k, v in env_col_map.items())
+                "열 이름 매핑: "
+                + ", ".join(f"{k} → {v}" for k, v in env_col_map.items())
             )
 
 # ──────────────────────────────────────────────
@@ -281,10 +289,15 @@ st.divider()
 # 10. 기초 통계 요약
 # ──────────────────────────────────────────────
 st.subheader("📊 기초 통계 요약")
-st.caption("각 생육 지표별 평균·표준편차·중앙값·최소·최대 값을 보여줍니다.")
+st.caption(
+    "각 생육 지표별 평균·표준편차·중앙값·최소·최대 값을 보여줍니다. "
+    "통계 용어 설명은 사이드바를 참고하세요."
+)
 num_cols = [
-    c for c in ["잎 수(장)", "지상부 길이(mm)", "지하부길이(mm)",
-                "지하부질량(g)", "지상부질량(g)"]
+    c for c in [
+        "잎 수(장)", "지상부 길이(mm)", "지하부길이(mm)",
+        "지하부질량(g)", "지상부질량(g)",
+    ]
     if c in growth_df.columns
 ]
 if num_cols:
@@ -320,9 +333,16 @@ if len(num_cols) >= 2:
     short_labels = [c.replace("(mm)", "").replace("(g)", "").replace("(장)", "")
                     for c in corr.columns]
     sns.heatmap(
-        corr, annot=True, cmap="RdBu_r", vmin=-1, vmax=1,
-        fmt=".2f", linewidths=0.5, ax=ax,
-        xticklabels=short_labels, yticklabels=short_labels,
+        corr,
+        annot=True,
+        cmap="RdBu_r",
+        vmin=-1,
+        vmax=1,
+        fmt=".2f",
+        linewidths=0.5,
+        ax=ax,
+        xticklabels=short_labels,
+        yticklabels=short_labels,
     )
     ax.set_title("생육 지표 간 상관계수")
     plt.tight_layout()
@@ -345,11 +365,16 @@ if num_cols:
         help="각 개체의 값을 막대차트로 보여줍니다.",
     )
     if view_col:
-        df_plot = growth_df[["개체번호", view_col]].sort_values(view_col, ascending=False)
+        df_plot = growth_df[["개체번호", view_col]].sort_values(
+            view_col, ascending=False
+        )
         fig, ax = plt.subplots(figsize=(10, 5))
-        ax.bar(df_plot["개체번호"], df_plot[view_col],
-               color=plt.cm.viridis(np.linspace(0.1, 0.9, len(df_plot))),
-               edgecolor="white")
+        ax.bar(
+            df_plot["개체번호"],
+            df_plot[view_col],
+            color=plt.cm.viridis(np.linspace(0.1, 0.9, len(df_plot))),
+            edgecolor="white",
+        )
         ax.set_xlabel("개체번호")
         ax.set_ylabel(view_col)
         ax.set_title(f"개체별 {view_col}")
@@ -372,15 +397,30 @@ if len(num_cols) >= 2:
     with col_x:
         sel_x = st.selectbox("X축 (가로)", options=num_cols, index=0)
     with col_y:
-        sel_y = st.selectbox("Y축 (세로)", options=num_cols,
-                              index=1 if len(num_cols) > 1 else 0)
+        sel_y = st.selectbox(
+            "Y축 (세로)",
+            options=num_cols,
+            index=min(1, len(num_cols) - 1),
+        )
     if sel_x and sel_y:
         fig, ax = plt.subplots(figsize=(7, 5))
-        ax.scatter(growth_df[sel_x], growth_df[sel_y],
-                   s=60, alpha=0.7, edgecolors="k", linewidths=0.5)
+        ax.scatter(
+            growth_df[sel_x],
+            growth_df[sel_y],
+            s=60,
+            alpha=0.7,
+            edgecolors="k",
+            linewidths=0.5,
+        )
         for _, row in growth_df.iterrows():
-            ax.annotate(row["개체번호"], (row[sel_x], row[sel_y]),
-                        fontsize=7, alpha=0.6, ha="center", va="bottom")
+            ax.annotate(
+                row["개체번호"],
+                (row[sel_x], row[sel_y]),
+                fontsize=7,
+                alpha=0.6,
+                ha="center",
+                va="bottom",
+            )
         ax.set_xlabel(sel_x)
         ax.set_ylabel(sel_y)
         ax.set_title(f"{sel_x} vs {sel_y}")
@@ -409,20 +449,30 @@ st.divider()
 if not env_df.empty:
     st.subheader("🌡️ 환경 데이터 시계열")
     st.caption("환경 센서 데이터를 시간 순서대로 선 그래프로 표시합니다.")
-    env_metric_options = [c for c in ["temperature", "humidity", "ph", "ec",
-                                       "water_temp", "co2"]
-                          if c in env_df.columns]
+    env_metric_options = [
+        c for c in ["temperature", "humidity", "ph", "ec",
+                     "water_temp", "co2"]
+        if c in env_df.columns
+    ]
     env_metric = st.selectbox(
         "표시할 환경 지표",
         options=env_metric_options,
         index=0 if "temperature" in env_metric_options else None,
     )
     if env_metric and "time_dt" in env_df.columns:
-        df_env_plot = env_df[["time_dt", env_metric]].dropna().sort_values("time_dt")
+        df_env_plot = env_df[["time_dt", env_metric]].dropna().sort_values(
+            "time_dt"
+        )
         if not df_env_plot.empty:
             fig, ax = plt.subplots(figsize=(10, 4))
-            ax.plot(df_env_plot["time_dt"], df_env_plot[env_metric],
-                    marker="o", markersize=3, linewidth=1, alpha=0.8)
+            ax.plot(
+                df_env_plot["time_dt"],
+                df_env_plot[env_metric],
+                marker="o",
+                markersize=3,
+                linewidth=1,
+                alpha=0.8,
+            )
             ax.set_xlabel("시간")
             ax.set_ylabel(env_metric)
             ax.set_title(f"시간별 {env_metric}")
@@ -447,29 +497,40 @@ if not env_df.empty:
                     f"센서 측정이 없는 구간(6시간 초과)이 {len(big_gaps)}곳 있습니다. "
                     "해당 구간은 그래프에서 빠져 있습니다."
                 )
-st.divider()
+    st.divider()
 
 # ──────────────────────────────────────────────
 # 15. 생육 × 환경 병합 분석
 # ──────────────────────────────────────────────
 if not growth_df.empty and not env_df.empty:
     st.subheader("🌿 생육 × 환경 병합 분석")
-    st.caption("환경 데이터와 생육 데이터를 시간 기준으로 연결해 분석합니다.")
+    st.caption(
+        "환경 데이터와 생육 데이터를 시간 기준으로 연결해 분석합니다."
+    )
     if "time_dt" in env_df.columns and "개체번호" in growth_df.columns:
-        env_avg = (env_df.set_index("time_dt")
-                   .resample("h").mean(numeric_only=True)
-                   .reset_index()
-                   .dropna(subset=[c for c in env_df.columns
-                                   if c not in ["time", "time_dt"]]))
+        env_avg = (
+            env_df.set_index("time_dt")
+            .resample("h")
+            .mean(numeric_only=True)
+            .reset_index()
+            .dropna(
+                subset=[
+                    c for c in env_df.columns
+                    if c not in ["time", "time_dt"]
+                ]
+            )
+        )
         st.info(
             "환경 데이터는 시간별 평균 내어 생육 데이터와 같은 시간 축에서 비교합니다. "
             "개체 번호가 시간 정보와 매핑되지 않으면 병합 분석이 제한될 수 있습니다."
         )
         st.dataframe(env_avg.head(10), use_container_width=True)
     else:
-        st.warning("환경 데이터의 시간 열 또는 생육 데이터의 개체번호 열이 없어 "
-                    "병합 분석을 수행할 수 없습니다.")
-st.divider()
+        st.warning(
+            "환경 데이터의 시간 열 또는 생육 데이터의 개체번호 열이 없어 "
+            "병합 분석을 수행할 수 없습니다."
+        )
+    st.divider()
 
 # ──────────────────────────────────────────────
 # 16. 정제 데이터 다운로드
