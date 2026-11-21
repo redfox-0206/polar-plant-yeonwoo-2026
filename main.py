@@ -838,6 +838,7 @@ uploaded_growth = st.sidebar.file_uploader(
         "열 이름에 단위·띄어쓰기가 섞여 있어도 괜찮습니다. "
         "예: '잎 수(장)', '지상부 길이(mm)', '지하부길이(mm)'"
     ),
+    key="growth_uploader",
 )
 
 uploaded_env = st.sidebar.file_uploader(
